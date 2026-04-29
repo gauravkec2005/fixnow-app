@@ -6,7 +6,7 @@ export async function POST(req: Request) {
 
   const { issue, zip_code, urgency } = body;
 
-  // 1. Create job
+  // STEP 1: create job in SEARCHING state
   const { data: job, error } = await supabase
     .from("jobs")
     .insert([
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
         issue,
         zip_code,
         urgency,
-        status: "new",
+        status: "searching",
       },
     ])
     .select()
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // 2. Simulate contractor assignment (Uber-style)
+  // STEP 2: simulate contractor assignment (Uber-style delay)
   setTimeout(async () => {
     await supabase
       .from("jobs")

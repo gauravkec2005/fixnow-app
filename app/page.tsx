@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function Home() {
   const [issue, setIssue] = useState("");
@@ -9,15 +9,20 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
 
   const steps = [
-    "Job Created",
-    "Finding Contractors",
-    "Assigning Best Match",
-    "Contractor Assigned",
+    { key: "searching", label: "Finding Contractors" },
+    { key: "assigned", label: "Contractor Assigned" },
   ];
 
-  const currentStep =
-    job?.status === "assigned" ? 3 :
-    job ? 1 : 0;
+  const getStepIndex = (status: string) => {
+    switch (status) {
+      case "searching":
+        return 0;
+      case "assigned":
+        return 1;
+      default:
+        return -1;
+    }
+  };
 
   const submitJob = async () => {
     setLoading(true);
@@ -39,17 +44,13 @@ export default function Home() {
 
   return (
     <div style={styles.page}>
-
       <h1 style={styles.title}>FixNow</h1>
-      <p style={styles.subtitle}>
-        Instant home repair dispatch
-      </p>
+      <p style={styles.subtitle}>Instant home repair dispatch</p>
 
-      {/* INPUT */}
       {!job && (
         <div style={styles.card}>
           <input
-            placeholder="What is the issue?"
+            placeholder="What needs fixing?"
             value={issue}
             onChange={(e) => setIssue(e.target.value)}
             style={styles.input}
@@ -62,30 +63,32 @@ export default function Home() {
             style={styles.input}
           />
 
-          <button onClick={submitJob} style={styles.button}>
+          <button onClick={submitJob} style={styles.button} disabled={loading}>
             {loading ? "Submitting..." : "Request Help"}
           </button>
         </div>
       )}
 
-      {/* STATUS */}
       {job && (
         <div style={styles.card}>
           <h2>Job Tracking</h2>
 
-          {steps.map((s, i) => (
-            <div
-              key={s}
-              style={{
-                padding: 10,
-                marginTop: 8,
-                borderRadius: 8,
-                background: i <= currentStep ? "#e6f7e6" : "#f2f2f2",
-              }}
-            >
-              {i <= currentStep ? "✅" : "⏳"} {s}
-            </div>
-          ))}
+          {steps.map((step, i) => {
+            const current = getStepIndex(job.status);
+            return (
+              <div
+                key={step.key}
+                style={{
+                  padding: 10,
+                  marginTop: 8,
+                  borderRadius: 8,
+                  background: i <= current ? "#e6f7e6" : "#f2f2f2",
+                }}
+              >
+                {i <= current ? "✅" : "⏳"} {step.label}
+              </div>
+            );
+          })}
 
           <div style={styles.statusBox}>
             <b>Job ID:</b> {job.id}
@@ -98,7 +101,6 @@ export default function Home() {
   );
 }
 
-/* STYLES */
 const styles: any = {
   page: {
     fontFamily: "Arial",
@@ -106,14 +108,8 @@ const styles: any = {
     maxWidth: 500,
     margin: "0 auto",
   },
-  title: {
-    fontSize: 36,
-    fontWeight: 800,
-  },
-  subtitle: {
-    color: "#666",
-    marginBottom: 20,
-  },
+  title: { fontSize: 36, fontWeight: 800 },
+  subtitle: { color: "#666", marginBottom: 20 },
   card: {
     background: "#fff",
     padding: 20,
@@ -132,8 +128,8 @@ const styles: any = {
     padding: 12,
     background: "#000",
     color: "#fff",
-    border: "none",
     borderRadius: 8,
+    border: "none",
     cursor: "pointer",
   },
   statusBox: {
