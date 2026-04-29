@@ -1,119 +1,145 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
   const [issue, setIssue] = useState("");
-  const [zipCode, setZipCode] = useState("");
-  const [urgency, setUrgency] = useState("ASAP");
-
+  const [zip, setZip] = useState("");
+  const [job, setJob] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const steps = [
+    "Job Created",
+    "Finding Contractors",
+    "Assigning Best Match",
+    "Contractor Assigned",
+  ];
 
-    // 🚨 prevent double submit
-    if (loading) return;
+  const currentStep =
+    job?.status === "assigned" ? 3 :
+    job ? 1 : 0;
 
+  const submitJob = async () => {
     setLoading(true);
-    setError("");
-    setResult(null);
 
-    try {
-      const res = await fetch("/api/job/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          issue,
-          zip_code: zipCode,
-          urgency,
-        }),
-      });
+    const res = await fetch("/api/job/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        issue,
+        zip_code: zip,
+        urgency: "ASAP",
+      }),
+    });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data?.error || "Request failed");
-      }
-
-      console.log("✅ Response:", data);
-      setResult(data);
-    } catch (err: any) {
-      console.error("❌ Error:", err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    const data = await res.json();
+    setJob(data.job);
+    setLoading(false);
   };
 
   return (
-    <main style={{ maxWidth: 500, margin: "40px auto", fontFamily: "Arial" }}>
-      <h1>FixNow 🚨 Job Request</h1>
+    <div style={styles.page}>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          placeholder="Issue (e.g. water leak)"
-          value={issue}
-          onChange={(e) => setIssue(e.target.value)}
-          required
-          style={{ display: "block", marginBottom: 10, width: "100%" }}
-        />
+      <h1 style={styles.title}>FixNow</h1>
+      <p style={styles.subtitle}>
+        Instant home repair dispatch
+      </p>
 
-        <input
-          placeholder="Zip Code"
-          value={zipCode}
-          onChange={(e) => setZipCode(e.target.value)}
-          required
-          style={{ display: "block", marginBottom: 10, width: "100%" }}
-        />
+      {/* INPUT */}
+      {!job && (
+        <div style={styles.card}>
+          <input
+            placeholder="What is the issue?"
+            value={issue}
+            onChange={(e) => setIssue(e.target.value)}
+            style={styles.input}
+          />
 
-        <select
-          value={urgency}
-          onChange={(e) => setUrgency(e.target.value)}
-          style={{ display: "block", marginBottom: 10, width: "100%" }}
-        >
-          <option value="ASAP">ASAP</option>
-          <option value="NORMAL">Normal</option>
-        </select>
+          <input
+            placeholder="ZIP Code"
+            value={zip}
+            onChange={(e) => setZip(e.target.value)}
+            style={styles.input}
+          />
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: "100%",
-            padding: 10,
-            background: loading ? "#ccc" : "#000",
-            color: "#fff",
-            cursor: loading ? "not-allowed" : "pointer",
-          }}
-        >
-          {loading ? "Submitting..." : "Submit Job"}
-        </button>
-      </form>
-
-      {/* ERROR */}
-      {error && (
-        <p style={{ color: "red", marginTop: 20 }}>
-          ❌ {error}
-        </p>
+          <button onClick={submitJob} style={styles.button}>
+            {loading ? "Submitting..." : "Request Help"}
+          </button>
+        </div>
       )}
 
-      {/* RESULT */}
-      {result && (
-        <pre
-          style={{
-            marginTop: 20,
-            background: "#f5f5f5",
-            padding: 10,
-          }}
-        >
-          {JSON.stringify(result, null, 2)}
-        </pre>
+      {/* STATUS */}
+      {job && (
+        <div style={styles.card}>
+          <h2>Job Tracking</h2>
+
+          {steps.map((s, i) => (
+            <div
+              key={s}
+              style={{
+                padding: 10,
+                marginTop: 8,
+                borderRadius: 8,
+                background: i <= currentStep ? "#e6f7e6" : "#f2f2f2",
+              }}
+            >
+              {i <= currentStep ? "✅" : "⏳"} {s}
+            </div>
+          ))}
+
+          <div style={styles.statusBox}>
+            <b>Job ID:</b> {job.id}
+            <br />
+            <b>Status:</b> {job.status}
+          </div>
+        </div>
       )}
-    </main>
+    </div>
   );
 }
+
+/* STYLES */
+const styles: any = {
+  page: {
+    fontFamily: "Arial",
+    padding: 30,
+    maxWidth: 500,
+    margin: "0 auto",
+  },
+  title: {
+    fontSize: 36,
+    fontWeight: 800,
+  },
+  subtitle: {
+    color: "#666",
+    marginBottom: 20,
+  },
+  card: {
+    background: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    boxShadow: "0 10px 20px rgba(0,0,0,0.05)",
+  },
+  input: {
+    width: "100%",
+    padding: 12,
+    marginBottom: 10,
+    borderRadius: 8,
+    border: "1px solid #ddd",
+  },
+  button: {
+    width: "100%",
+    padding: 12,
+    background: "#000",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    cursor: "pointer",
+  },
+  statusBox: {
+    marginTop: 15,
+    padding: 10,
+    background: "#f9f9f9",
+    borderRadius: 8,
+  },
+};
