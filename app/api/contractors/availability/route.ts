@@ -2,49 +2,45 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
 export async function GET() {
-  try {
-    const { data, error } = await supabase
-      .from("contractors")
-      .select("*");
+  const { data, error } = await supabase
+    .from("contractors")
+    .select("*");
 
-    if (error) {
-      console.error("SUPABASE ERROR:", error);
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
-
-    const contractors = data || [];
-
-    const now = contractors.filter(
-      (c) => (c.available_in_hours ?? 0) === 0
-    ).length;
-
-    const fewHours = contractors.filter(
-      (c) =>
-        (c.available_in_hours ?? 0) > 0 &&
-        (c.available_in_hours ?? 0) <= 3
-    ).length;
-
-    const today = contractors.filter(
-      (c) =>
-        (c.available_in_hours ?? 0) > 3 &&
-        (c.available_in_hours ?? 0) <= 12
-    ).length;
-
-    return NextResponse.json({
-      now,
-      fewHours,
-      today,
-      total: contractors.length,
-      source: "supabase"
-    });
-  } catch (e: any) {
-    console.error("API ERROR:", e);
-    return NextResponse.json(
-      { error: e.message },
-      { status: 500 }
-    );
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  const contractors = data || [];
+
+  const group = (type: string, min: number, max: number) =>
+    contractors.filter(
+      (c) =>
+        c.type === type &&
+        (c.available_in_hours ?? 0) >= min &&
+        (c.available_in_hours ?? 0) <= max
+    ).length;
+
+  const summary = {
+    now: {
+      plumbers: group("Plumber", 0, 0),
+      electricians: group("Electrician", 0, 0),
+      hvac: group("HVAC", 0, 0),
+      handyman: group("Handyman", 0, 0),
+    },
+    fewHours: {
+      plumbers: group("Plumber", 1, 3),
+      electricians: group("Electrician", 1, 3),
+      hvac: group("HVAC", 1, 3),
+      handyman: group("Handyman", 1, 3),
+    },
+    today: {
+      plumbers: group("Plumber", 4, 12),
+      electricians: group("Electrician", 4, 12),
+      hvac: group("HVAC", 4, 12),
+      handyman: group("Handyman", 4, 12),
+    },
+    total: contractors.length,
+  };
+
+  return NextResponse.json(summary);
 }
