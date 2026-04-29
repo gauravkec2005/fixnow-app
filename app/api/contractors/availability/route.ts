@@ -2,40 +2,45 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
 export async function GET() {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("contractors")
     .select("*");
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
   const contractors = data || [];
 
-  const group = (min: number, max: number) =>
-    contractors.filter(
-      (c) =>
-        (c.available_in_hours ?? 0) >= min &&
-        (c.available_in_hours ?? 0) <= max
-    );
+  const now = contractors.filter(c => (c.available_in_hours ?? 0) === 0);
+  const few = contractors.filter(c => (c.available_in_hours ?? 0) > 0 && (c.available_in_hours ?? 0) <= 3);
+  const later = contractors.filter(c => (c.available_in_hours ?? 0) > 3);
 
-  const now = group(0, 0);
-  const fewHours = group(1, 3);
-  const today = group(4, 12);
+  const byType = (list: any[]) => {
+    const map: any = {};
+    list.forEach(c => {
+      map[c.type] = (map[c.type] || 0) + 1;
+    });
+    return map;
+  };
+
+  const signal =
+    contractors.length <= 3
+      ? "LOW_SUPPLY"
+      : contractors.length <= 6
+      ? "BALANCED"
+      : "HIGH_SUPPLY";
 
   return NextResponse.json({
     now: {
       count: now.length,
-      types: [...new Set(now.map(c => c.type))],
+      types: byType(now),
     },
     fewHours: {
-      count: fewHours.length,
-      types: [...new Set(fewHours.map(c => c.type))],
+      count: few.length,
+      types: byType(few),
     },
     today: {
-      count: today.length,
-      types: [...new Set(today.map(c => c.type))],
+      count: later.length,
+      types: byType(later),
     },
+    signal, // ⭐ NEW
     total: contractors.length,
   });
 }
