@@ -52,51 +52,74 @@ export default function Home() {
         <p>Instant home repair dispatch</p>
       </div>
 
-      {/* MARKETPLACE SIGNAL DASHBOARD */}
+      {/* MARKETPLACE SIGNAL (FRIENDLY UI) */}
       <div style={styles.card}>
-        <h2>Live Marketplace Signal</h2>
+        <h2>Live Marketplace Status</h2>
 
-        <p>
-          📊 Market Status: <b>{availability?.signal || "..."}</b>
-        </p>
+        {/* 🟢 NOW */}
+        <div style={styles.statusBox}>
+          <h3>🟢 Fast help available now</h3>
 
-        {/* NOW */}
-        <div style={styles.section}>
-          <h3>🟢 Available Now ({availability?.now?.count || 0})</h3>
-          <p style={styles.types}>
+          <p style={styles.bigText}>
+            {availability?.now?.count || 0} contractors ready
+          </p>
+
+          <p style={styles.subText}>
             {availability?.now?.types
               ? Object.entries(availability.now.types)
                   .map(([type, count]: any) => `${type} (${count})`)
                   .join(" · ")
-              : "No contractors"}
+              : "No contractors available"}
+          </p>
+
+          <p style={styles.meta}>
+            ⚡ Avg response: ~15–25 minutes
           </p>
         </div>
 
-        {/* FEW HOURS */}
-        <div style={styles.section}>
-          <h3>🟡 In a few hours ({availability?.fewHours?.count || 0})</h3>
-          <p style={styles.types}>
+        {/* 🟡 SOON */}
+        <div style={styles.statusBox}>
+          <h3>🟡 Help arriving soon</h3>
+
+          <p style={styles.bigText}>
+            {availability?.fewHours?.count || 0} contractors coming online
+          </p>
+
+          <p style={styles.subText}>
             {availability?.fewHours?.types
               ? Object.entries(availability.fewHours.types)
                   .map(([type, count]: any) => `${type} (${count})`)
                   .join(" · ")
-              : "No contractors"}
+              : "No upcoming availability"}
+          </p>
+
+          <p style={styles.meta}>
+            ⏳ Typically available within 1–3 hours
           </p>
         </div>
 
-        {/* LATER TODAY */}
-        <div style={styles.section}>
-          <h3>🔵 Later today ({availability?.today?.count || 0})</h3>
-          <p style={styles.types}>
+        {/* 🔵 LATER */}
+        <div style={styles.statusBox}>
+          <h3>🔵 Later today</h3>
+
+          <p style={styles.bigText}>
+            {availability?.today?.count || 0} scheduled contractors
+          </p>
+
+          <p style={styles.subText}>
             {availability?.today?.types
               ? Object.entries(availability.today.types)
                   .map(([type, count]: any) => `${type} (${count})`)
                   .join(" · ")
-              : "No contractors"}
+              : "No scheduled contractors"}
+          </p>
+
+          <p style={styles.meta}>
+            📅 Available later today
           </p>
         </div>
 
-        <p style={styles.small}>
+        <p style={styles.footer}>
           Total contractors: {availability?.total || 0}
         </p>
       </div>
@@ -167,20 +190,35 @@ const styles: any = {
     boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
   },
 
-  section: {
+  statusBox: {
+    padding: 15,
+    borderRadius: 12,
+    background: "#f9f9fb",
     marginBottom: 12,
+    border: "1px solid #eee",
   },
 
-  types: {
-    color: "#444",
+  bigText: {
+    fontSize: 18,
+    fontWeight: 700,
+    margin: "6px 0",
+  },
+
+  subText: {
     fontSize: 14,
+    color: "#555",
+  },
+
+  meta: {
+    fontSize: 12,
+    color: "#777",
     marginTop: 4,
   },
 
-  small: {
+  footer: {
     marginTop: 10,
     fontSize: 12,
-    color: "#777",
+    color: "#888",
   },
 
   input: {
