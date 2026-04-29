@@ -12,35 +12,30 @@ export async function GET() {
 
   const contractors = data || [];
 
-  const group = (type: string, min: number, max: number) =>
+  const group = (min: number, max: number) =>
     contractors.filter(
       (c) =>
-        c.type === type &&
         (c.available_in_hours ?? 0) >= min &&
         (c.available_in_hours ?? 0) <= max
-    ).length;
+    );
 
-  const summary = {
+  const now = group(0, 0);
+  const fewHours = group(1, 3);
+  const today = group(4, 12);
+
+  return NextResponse.json({
     now: {
-      plumbers: group("Plumber", 0, 0),
-      electricians: group("Electrician", 0, 0),
-      hvac: group("HVAC", 0, 0),
-      handyman: group("Handyman", 0, 0),
+      count: now.length,
+      types: [...new Set(now.map(c => c.type))],
     },
     fewHours: {
-      plumbers: group("Plumber", 1, 3),
-      electricians: group("Electrician", 1, 3),
-      hvac: group("HVAC", 1, 3),
-      handyman: group("Handyman", 1, 3),
+      count: fewHours.length,
+      types: [...new Set(fewHours.map(c => c.type))],
     },
     today: {
-      plumbers: group("Plumber", 4, 12),
-      electricians: group("Electrician", 4, 12),
-      hvac: group("HVAC", 4, 12),
-      handyman: group("Handyman", 4, 12),
+      count: today.length,
+      types: [...new Set(today.map(c => c.type))],
     },
     total: contractors.length,
-  };
-
-  return NextResponse.json(summary);
+  });
 }
