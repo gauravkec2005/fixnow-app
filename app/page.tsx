@@ -1,241 +1,115 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-export default function Home() {
-  const [issue, setIssue] = useState("");
-  const [zip, setZip] = useState("");
-  const [job, setJob] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [availability, setAvailability] = useState<any>(null);
+const mockData = {
+  availableNow: [
+    { id: 1, name: "Plumber", count: 1 },
+    { id: 2, name: "Electrician", count: 1 },
+  ],
+  soon: [{ id: 3, name: "HVAC", count: 1 }],
+  later: [],
+};
 
-  // -------------------------
-  // LOAD MARKET DATA
-  // -------------------------
-  useEffect(() => {
-    const load = async () => {
-      const res = await fetch("/api/contractors/availability");
-      const data = await res.json();
-      setAvailability(data);
-    };
-
-    load();
-  }, []);
-
-  // -------------------------
-  // SUBMIT JOB
-  // -------------------------
-  const submitJob = async () => {
-    setLoading(true);
-
-    const res = await fetch("/api/job/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        issue,
-        zip_code: zip,
-        urgency: "ASAP",
-      }),
-    });
-
-    const data = await res.json();
-    setJob(data.job);
-    setLoading(false);
-  };
-
+function TabButton({ active, onClick, children }) {
   return (
-    <div style={styles.page}>
+    <button
+      onClick={onClick}
+      className={`px-4 py-2 rounded-full text-sm border transition ${
+        active ? "bg-black text-white" : "bg-white hover:bg-gray-100"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
 
-      {/* HEADER */}
-      <div style={styles.header}>
-        <h1>FixNow 🚨</h1>
-        <p>Instant home repair dispatch</p>
-      </div>
-
-      {/* MARKETPLACE SIGNAL (FRIENDLY UI) */}
-      <div style={styles.card}>
-        <h2>Live Marketplace Status</h2>
-
-        {/* 🟢 NOW */}
-        <div style={styles.statusBox}>
-          <h3>🟢 Fast help available now</h3>
-
-          <p style={styles.bigText}>
-            {availability?.now?.count || 0} contractors ready
-          </p>
-
-          <p style={styles.subText}>
-            {availability?.now?.types
-              ? Object.entries(availability.now.types)
-                  .map(([type, count]: any) => `${type} (${count})`)
-                  .join(" · ")
-              : "No contractors available"}
-          </p>
-
-          <p style={styles.meta}>
-            ⚡ Avg response: ~15–25 minutes
-          </p>
-        </div>
-
-        {/* 🟡 SOON */}
-        <div style={styles.statusBox}>
-          <h3>🟡 Help arriving soon</h3>
-
-          <p style={styles.bigText}>
-            {availability?.fewHours?.count || 0} contractors coming online
-          </p>
-
-          <p style={styles.subText}>
-            {availability?.fewHours?.types
-              ? Object.entries(availability.fewHours.types)
-                  .map(([type, count]: any) => `${type} (${count})`)
-                  .join(" · ")
-              : "No upcoming availability"}
-          </p>
-
-          <p style={styles.meta}>
-            ⏳ Typically available within 1–3 hours
-          </p>
-        </div>
-
-        {/* 🔵 LATER */}
-        <div style={styles.statusBox}>
-          <h3>🔵 Later today</h3>
-
-          <p style={styles.bigText}>
-            {availability?.today?.count || 0} scheduled contractors
-          </p>
-
-          <p style={styles.subText}>
-            {availability?.today?.types
-              ? Object.entries(availability.today.types)
-                  .map(([type, count]: any) => `${type} (${count})`)
-                  .join(" · ")
-              : "No scheduled contractors"}
-          </p>
-
-          <p style={styles.meta}>
-            📅 Available later today
-          </p>
-        </div>
-
-        <p style={styles.footer}>
-          Total contractors: {availability?.total || 0}
-        </p>
-      </div>
-
-      {/* JOB FORM */}
-      {!job && (
-        <div style={styles.card}>
-          <h2>Create a Job</h2>
-
-          <input
-            placeholder="Issue (e.g. water leak)"
-            value={issue}
-            onChange={(e) => setIssue(e.target.value)}
-            style={styles.input}
-          />
-
-          <input
-            placeholder="Zip Code"
-            value={zip}
-            onChange={(e) => setZip(e.target.value)}
-            style={styles.input}
-          />
-
-          <button onClick={submitJob} style={styles.button}>
-            {loading ? "Finding contractors..." : "Submit Job"}
-          </button>
-        </div>
-      )}
-
-      {/* JOB TRACKING */}
-      {job && (
-        <div style={styles.card}>
-          <h2>Job Tracking</h2>
-
-          <p><b>Status:</b> {job.status}</p>
-          <p><b>Job ID:</b> {job.id}</p>
-
-          {job.status === "searching" && <p>⏳ Finding contractors...</p>}
-          {job.status === "assigned" && <p>✅ Contractor assigned</p>}
+function Card({ title, items }) {
+  return (
+    <div className="p-4 rounded-2xl border bg-white shadow-sm">
+      <h2 className="font-semibold mb-3">{title}</h2>
+      {items.length === 0 ? (
+        <p className="text-gray-400 text-sm">No data available</p>
+      ) : (
+        <div className="space-y-2">
+          {items.map((i) => (
+            <div
+              key={i.id}
+              className="flex justify-between items-center p-2 border rounded-xl"
+            >
+              <span>{i.name}</span>
+              <span className="text-sm text-gray-500">{i.count}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-/* ---------------- STYLES ---------------- */
+export default function LiveMarketplaceSignal() {
+  const [screen, setScreen] = useState("overview");
 
-const styles: any = {
-  page: {
-    fontFamily: "Arial",
-    maxWidth: 600,
-    margin: "0 auto",
-    padding: 20,
-    background: "#f6f7fb",
-    minHeight: "100vh",
-  },
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <h1 className="text-2xl font-bold mb-4">Live Marketplace Signal</h1>
 
-  header: {
-    textAlign: "center",
-    marginBottom: 20,
-  },
+      {/* Navigation */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <TabButton active={screen === "overview"} onClick={() => setScreen("overview")}>Overview</TabButton>
+        <TabButton active={screen === "now"} onClick={() => setScreen("now")}>Available Now</TabButton>
+        <TabButton active={screen === "soon"} onClick={() => setScreen("soon")}>In a few hours</TabButton>
+        <TabButton active={screen === "later"} onClick={() => setScreen("later")}>Later today</TabButton>
+        <TabButton active={screen === "analytics"} onClick={() => setScreen("analytics")}>Analytics</TabButton>
+        <TabButton active={screen === "settings"} onClick={() => setScreen("settings")}>Settings</TabButton>
+      </div>
 
-  card: {
-    background: "#fff",
-    padding: 20,
-    borderRadius: 14,
-    marginBottom: 15,
-    boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
-  },
+      {/* Screens */}
+      {screen === "overview" && (
+        <div className="grid md:grid-cols-3 gap-4">
+          <Card title="Available Now" items={mockData.availableNow} />
+          <Card title="Coming Soon" items={mockData.soon} />
+          <Card title="Later Today" items={mockData.later} />
+        </div>
+      )}
 
-  statusBox: {
-    padding: 15,
-    borderRadius: 12,
-    background: "#f9f9fb",
-    marginBottom: 12,
-    border: "1px solid #eee",
-  },
+      {screen === "now" && (
+        <Card title="Available Now" items={mockData.availableNow} />
+      )}
 
-  bigText: {
-    fontSize: 18,
-    fontWeight: 700,
-    margin: "6px 0",
-  },
+      {screen === "soon" && (
+        <Card title="In a Few Hours" items={mockData.soon} />
+      )}
 
-  subText: {
-    fontSize: 14,
-    color: "#555",
-  },
+      {screen === "later" && (
+        <Card title="Later Today" items={mockData.later} />
+      )}
 
-  meta: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 4,
-  },
+      {screen === "analytics" && (
+        <div className="p-6 border rounded-2xl bg-white">
+          <h2 className="font-semibold mb-2">Analytics</h2>
+          <p className="text-sm text-gray-500">
+            Demand vs Supply trends, conversion rates, and peak hours (placeholder UI).
+          </p>
+          <div className="mt-4 h-40 bg-gray-100 rounded-xl flex items-center justify-center">
+            Chart Area
+          </div>
+        </div>
+      )}
 
-  footer: {
-    marginTop: 10,
-    fontSize: 12,
-    color: "#888",
-  },
-
-  input: {
-    width: "100%",
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 8,
-    border: "1px solid #ddd",
-  },
-
-  button: {
-    width: "100%",
-    padding: 12,
-    background: "#111",
-    color: "#fff",
-    borderRadius: 8,
-    border: "none",
-    cursor: "pointer",
-  },
-};
+      {screen === "settings" && (
+        <div className="p-6 border rounded-2xl bg-white space-y-4">
+          <h2 className="font-semibold">Settings</h2>
+          <div className="flex items-center justify-between">
+            <span>Notifications</span>
+            <input type="checkbox" defaultChecked />
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Auto-refresh</span>
+            <input type="checkbox" defaultChecked />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
