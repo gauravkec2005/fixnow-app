@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import twilio from "twilio";
 
-const twilioClient = twilio(
+const client = twilio(
   process.env.TWILIO_ACCOUNT_SID!,
   process.env.TWILIO_AUTH_TOKEN!
 );
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   try {
     const { issue, zip_code, urgency } = await req.json();
 
-    // 1. Create job
+    // Create job
     const { data: job, error } = await supabase
       .from("jobs")
       .insert({
@@ -27,15 +27,15 @@ export async function POST(req: Request) {
 
     console.log("📦 JOB CREATED:", job.id);
 
-    // 2. Mock contractors
+    // Mock contractors
     const contractors = [
       { phone: "+15711111111" },
       { phone: "+15713535926" },
     ];
 
-    // 3. Send WhatsApp
+    // Send WhatsApp
     for (const c of contractors) {
-      await twilioClient.messages.create({
+      await client.messages.create({
         from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
         to: `whatsapp:${c.phone}`,
         body: `FixNow 🚨 New Job: ${issue}. Reply YES to accept.`,

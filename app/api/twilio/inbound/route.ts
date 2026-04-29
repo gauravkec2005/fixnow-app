@@ -9,13 +9,13 @@ export async function POST(req: Request) {
     const from = formData.get("From") as string;
     const body = (formData.get("Body") as string)?.trim().toUpperCase();
 
-    console.log("📩 Incoming WhatsApp message:", from, body);
+    console.log("📩 Incoming WhatsApp:", from, body);
 
     if (body !== "YES") {
       return new Response("ignored");
     }
 
-    // 1. Get latest open job
+    // Find latest job
     const { data: jobs, error: fetchError } = await supabase
       .from("jobs")
       .select("*")
@@ -32,15 +32,22 @@ export async function POST(req: Request) {
       return new Response("no job found");
     }
 
-    console.log("🛠 Updating job:", job.id);
+    console.log("🛠 Assigning job:", job.id);
 
-    // 2. Update job
+    // EST timestamp conversion
+    const estTimestamp = new Date(
+      new Date().toLocaleString("en-US", {
+        timeZone: "America/New_York",
+      })
+    ).toISOString();
+
+    // Update job
     const { data: updateData, error: updateError } = await supabase
       .from("jobs")
       .update({
         status: "assigned",
         assigned_to: from,
-        assigned_at: new Date().toISOString(),
+        assigned_at: estTimestamp,
       })
       .eq("id", job.id)
       .select();
