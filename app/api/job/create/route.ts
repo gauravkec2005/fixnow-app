@@ -1,69 +1,52 @@
 import { NextResponse } from "next/server";
-import { twilioClient } from "@/lib/twilio";
-import { addJob } from "@/lib/store";
+import { supabase } from "@/lib/supabase";
+import twilio from "twilio";
+
+const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID!,
+  process.env.TWILIO_AUTH_TOKEN!
+);
 
 export async function POST(req: Request) {
   try {
     const { issue, zip_code, urgency } = await req.json();
 
-    // 1. CREATE JOB OBJECT
-    const job = {
-      id: crypto.randomUUID(),
-      issue,
-      zip_code,
-      urgency,
-      status: "new" as const,
-      created_at: new Date().toISOString(),
-    };
-
-    // 2. STORE JOB (IMPORTANT for YES flow)
-    addJob(job);
-
-    console.log("📦 Job created:", job.id);
-
-    // 3. MOCK MATCHING (replace later with DB logic)
-    const matches = [
-      {
-        id: "1",
-        name: "John Plumbing",
-        phone: "+15713535926", // MUST be WhatsApp sandbox joined
+    // 1. Create job
+    const { data: job, error } = await supabase
+      .from("jobs")
+      .insert({
+        issue,
         zip_code,
-        is_available: true,
-      },
+        urgency,
+        status: "new",
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    console.log("📦 JOB CREATED:", job.id);
+
+    // 2. Mock contractors
+    const contractors = [
+      { phone: "+15711111111" },
+      { phone: "+15713535926" },
     ];
 
-    // 4. SEND WHATSAPP MESSAGES
-    for (const contractor of matches) {
-      console.log("📡 Sending WhatsApp to:", contractor.phone);
-
-      try {
-        const msg = await twilioClient.messages.create({
-          from: "whatsapp:+14155238886",
-          to: `whatsapp:${contractor.phone}`,
-          body: `FixNow 🚨 New Job: ${job.issue} in ${job.zip_code}. Reply YES to accept.`,
-        });
-
-        console.log("✅ WhatsApp SENT:", msg.sid);
-      } catch (err: any) {
-        console.error("❌ WhatsApp FAILED:", err.message);
-      }
+    // 3. Send WhatsApp
+    for (const c of contractors) {
+      await twilioClient.messages.create({
+        from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
+        to: `whatsapp:${c.phone}`,
+        body: `FixNow 🚨 New Job: ${issue}. Reply YES to accept.`,
+      });
     }
 
-    // 5. RETURN RESPONSE TO FRONTEND
-    return NextResponse.json({
-      job,
-      matches,
-      message: "Job created and dispatched via WhatsApp",
-    });
-  } catch (error: any) {
-    console.error("API Error:", error);
+    console.log("📡 WhatsApp sent");
 
-    return NextResponse.json(
-      {
-        error: "Failed to create job",
-        details: error.message,
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ job });
+  } catch (err: any) {
+    console.error(err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

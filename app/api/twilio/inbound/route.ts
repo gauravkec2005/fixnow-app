@@ -1,31 +1,21 @@
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 export async function POST(req: Request) {
-  console.log("🔥 WEBHOOK HIT");
-
   try {
+    console.log("🔥 WEBHOOK HIT");
+
     const formData = await req.formData();
 
     const from = formData.get("From") as string;
     const body = (formData.get("Body") as string)?.trim().toUpperCase();
 
-    console.log("📩 Incoming WhatsApp message");
-    console.log("From:", from);
-    console.log("Body:", body);
+    console.log("📩 Incoming WhatsApp message:", from, body);
 
     if (body !== "YES") {
-      console.log("❌ Not YES — ignoring");
       return new Response("ignored");
     }
 
-    // ✅ Create Supabase client safely
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    console.log("👉 STEP 1: searching job");
-
+    // 1. Get latest open job
     const { data: jobs, error: fetchError } = await supabase
       .from("jobs")
       .select("*")
@@ -33,23 +23,18 @@ export async function POST(req: Request) {
       .order("created_at", { ascending: true })
       .limit(1);
 
-    console.log("👉 FETCH ERROR:", fetchError);
-    console.log("👉 JOBS FOUND:", jobs);
-
-    if (fetchError) {
-      console.log("❌ Supabase fetch failed");
-      return new Response("db fetch error", { status: 500 });
-    }
+    console.log("🔍 FETCH ERROR:", fetchError);
+    console.log("🔍 JOBS:", jobs);
 
     const job = jobs?.[0];
 
     if (!job) {
-      console.log("❌ No open jobs found");
-      return new Response("no job");
+      return new Response("no job found");
     }
 
-    console.log("👉 STEP 2: updating job:", job.id);
+    console.log("🛠 Updating job:", job.id);
 
+    // 2. Update job
     const { data: updateData, error: updateError } = await supabase
       .from("jobs")
       .update({
@@ -60,19 +45,12 @@ export async function POST(req: Request) {
       .eq("id", job.id)
       .select();
 
-    console.log("👉 UPDATE DATA:", updateData);
-    console.log("👉 UPDATE ERROR:", updateError);
-
-    if (updateError) {
-      console.log("❌ Update failed");
-      return new Response("update error", { status: 500 });
-    }
-
-    console.log("✅ JOB ASSIGNED SUCCESSFULLY:", job.id);
+    console.log("✅ UPDATE DATA:", updateData);
+    console.log("❌ UPDATE ERROR:", updateError);
 
     return new Response("ok");
   } catch (err: any) {
-    console.error("💥 WEBHOOK CRASH:", err);
-    return new Response("server error", { status: 500 });
+    console.error("💥 WEBHOOK ERROR:", err);
+    return new Response("error", { status: 500 });
   }
 }
