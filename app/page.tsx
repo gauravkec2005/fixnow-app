@@ -4,55 +4,116 @@ import { useState } from "react";
 
 export default function Home() {
   const [issue, setIssue] = useState("");
-  const [zip, setZip] = useState("");
+  const [zipCode, setZipCode] = useState("");
+  const [urgency, setUrgency] = useState("ASAP");
+
+  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [error, setError] = useState("");
 
-  async function submit() {
-    const res = await fetch("/api/job/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ issue, zip_code: zip, urgency: "ASAP" }),
-    });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    const data = await res.json();
-    setResult(data);
-  }
+    // 🚨 prevent double submit
+    if (loading) return;
+
+    setLoading(true);
+    setError("");
+    setResult(null);
+
+    try {
+      const res = await fetch("/api/job/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          issue,
+          zip_code: zipCode,
+          urgency,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Request failed");
+      }
+
+      console.log("✅ Response:", data);
+      setResult(data);
+    } catch (err: any) {
+      console.error("❌ Error:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div style={{
-      maxWidth: 500,
-      margin: "50px auto",
-      fontFamily: "Arial"
-    }}>
-      <h1 style={{ fontSize: 32 }}>FixNow 🚨</h1>
-      <p>Request emergency plumbing help</p>
+    <main style={{ maxWidth: 500, margin: "40px auto", fontFamily: "Arial" }}>
+      <h1>FixNow 🚨 Job Request</h1>
 
-      <input
-        placeholder="Describe issue"
-        value={issue}
-        onChange={(e) => setIssue(e.target.value)}
-        style={{ width: "100%", padding: 10, marginBottom: 10 }}
-      />
+      <form onSubmit={handleSubmit}>
+        <input
+          placeholder="Issue (e.g. water leak)"
+          value={issue}
+          onChange={(e) => setIssue(e.target.value)}
+          required
+          style={{ display: "block", marginBottom: 10, width: "100%" }}
+        />
 
-      <input
-        placeholder="Zip code"
-        value={zip}
-        onChange={(e) => setZip(e.target.value)}
-        style={{ width: "100%", padding: 10, marginBottom: 10 }}
-      />
+        <input
+          placeholder="Zip Code"
+          value={zipCode}
+          onChange={(e) => setZipCode(e.target.value)}
+          required
+          style={{ display: "block", marginBottom: 10, width: "100%" }}
+        />
 
-      <button
-        onClick={submit}
-        style={{ padding: 10, width: "100%" }}
-      >
-        Submit Request
-      </button>
+        <select
+          value={urgency}
+          onChange={(e) => setUrgency(e.target.value)}
+          style={{ display: "block", marginBottom: 10, width: "100%" }}
+        >
+          <option value="ASAP">ASAP</option>
+          <option value="NORMAL">Normal</option>
+        </select>
 
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: "100%",
+            padding: 10,
+            background: loading ? "#ccc" : "#000",
+            color: "#fff",
+            cursor: loading ? "not-allowed" : "pointer",
+          }}
+        >
+          {loading ? "Submitting..." : "Submit Job"}
+        </button>
+      </form>
+
+      {/* ERROR */}
+      {error && (
+        <p style={{ color: "red", marginTop: 20 }}>
+          ❌ {error}
+        </p>
+      )}
+
+      {/* RESULT */}
       {result && (
-        <pre style={{ marginTop: 20 }}>
+        <pre
+          style={{
+            marginTop: 20,
+            background: "#f5f5f5",
+            padding: 10,
+          }}
+        >
           {JSON.stringify(result, null, 2)}
         </pre>
       )}
-    </div>
+    </main>
   );
 }
